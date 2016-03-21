@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<persons>
+    <person name="polaris" age="28">
+        <career>worker</career>
+        <interests>
+            <interest>swiming</interest>
+            <interest>basketball</interest>
+        </interests>
+    </person>
+    <person name="kevin" age="29">
+        <career>IT</career>
+        <interests>
+            <interest>football</interest>
+        </interests>
+    </person>
+</persons>
