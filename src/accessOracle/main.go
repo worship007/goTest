@@ -7,7 +7,10 @@ import "log"
 import "fmt"
 import "bufio"
 import "os"
+
 import "database/sql"
+
+import "strings"
 import _ "github.com/wendal/go-oci8"
 
 //var sqlscript *string = flag.String("sql", "", "The sqlscript that will be executed.")
@@ -19,6 +22,27 @@ var user string = ""
 var password string = ""
 var dbcp string = ""
 var sqlscript string = ""
+
+var stmt *sql.Stmt = nil
+
+func execute(db *sql.DB, sqlscript string) {
+	stmt, err := db.Prepare(sqlscript)
+	defer stmt.Close()
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	result, err := stmt.Exec()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	count, _ := result.RowsAffected()
+	log.Printf("result count:%d", count)
+}
 
 func main() {
 	inputReader = bufio.NewReader(os.Stdin)
@@ -61,28 +85,41 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 		panic("数据库连接失败")
-	} else {
-		defer db.Close()
 	}
 
-	log.Println("Please input sqlscript.")
+	defer db.Close()
 
-	sqlscript, err = inputReader.ReadString('\n')
+	for {
+		log.Println("Please input sqlscript.")
 
-	if err != nil {
-		log.Fatal(err)
+		sqlscript, err = inputReader.ReadString('\n')
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if strings.Contains(sqlscript, "commit") {
+			break
+		}
+
+		sqlscript = sqlscript[:len(sqlscript)-2]
+
+		/*tx, err := db.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = tx.Exec("update hs_user.sysarg set company_no=6687;")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = tx.Commit()
+
+		if err != nil {
+			log.Fatal(err)
+		}*/
+
+		execute(db, sqlscript)
 	}
-
-	stmt, _ := db.Prepare(sqlscript)
-
-	defer stmt.Close()
-
-	result, err := stmt.Exec()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	count, _ := result.RowsAffected()
-	log.Printf("result count:%d", count)
 }
