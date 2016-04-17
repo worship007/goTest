@@ -2,65 +2,77 @@
 package main
 
 import "bufio"
+
 import "log"
+import "time"
+import "os"
 import "strings"
+import "strconv"
+
+//import "runtime"
+
+//import "strings"
 
 var sentence string = ""
 var inputReader *bufio.Reader
 var err error
 
-type Person struct {
-	Name    string
-	Age     uint8
-	Address Addr
-}
-
-type Addr struct {
-	city     string
-	district string
-}
-
 type PersonHandler interface {
-	Batch(origs <-chan Person) <-chan PersonHandler
-	Handle(orig Person)
+	Batch(origs <-chan int) <-chan PersonHandler
+	Handle(orig int)
 }
 
 type PersonHandlerImpl struct{}
 
-func (handler PersonHandlerImpl) Batch(origs <-chan Person) <-chan Person {
-	dests := make(chan Person, 100)
+func (handler PersonHandlerImpl) Batch(origs <-chan int) <-chan int {
+	dests := make(chan int, 100)
 	go func() {
 		for {
 			p, ok := <-origs
 			if !ok {
 				close(dests)
+				log.Println("the channel is closed.")
 				break
 			}
 
-			handler.Handle(p)
+			handler.Handle(&p)
+			log.Println("send:", p)
 			dests <- p
 		}
 	}()
 	return dests
 }
 
-func (handle PersonHandlerImpl) Handle(orig Person) {
-
+func (handle PersonHandlerImpl) Handle(orig *int) {
+	*orig = *orig + 100
 }
 
 func main() {
-	porigs := make(chan Person, 100)
-	//pdests := make(chan Person, 100)
+	inputReader = bufio.NewReader(os.Stdin)
 
-	p1 := Person{"Harry", 32, Addr{"Beijing", "Haidian"}}
-	//p2 := Person{"Sam", 30, Addr{"Guangzhou", "Yuexiu"}}
-	//p3 := Person{"Jack", 35, Addr{"Guangzhou", "Haizhu"}}
+	var ptemp int
+	var ok bool
+	porigs := make(chan int, 100)
+	//pdests := make(chan inta, 100)
+
+	p1 := 1
+	p2 := 2
+	p3 := 3
+	p4 := 4
+	p5 := 5
 
 	var phImpl PersonHandlerImpl
 
 	porigs <- p1
+	porigs <- p2
+	porigs <- p3
 
 	pdests := phImpl.Batch(porigs)
+
+	porigs <- p4
+	porigs <- p5
+
+	time.Sleep(2000000000)
 
 	for {
 		log.Println("Please input sentence.")
@@ -71,16 +83,57 @@ func main() {
 			log.Fatal(err)
 		}
 
-		if strings.Contains(sentence, "p1") {
-			porigs <- p1
-		}
-
-		if strings.Contains(sentence, "close") {
+		if strings.Contains(sentence, "complete") {
 			close(porigs)
 
-			who := <-pdests
-			log.Println(who)
+			for {
+				ptemp, ok = <-pdests
+
+				if !ok {
+					break
+				} else {
+					log.Println(ptemp)
+				}
+			}
+
 			break
+		} else if strings.Contains(sentence, "insert") {
+			log.Println("Please input the integer.")
+
+			sentence, err = inputReader.ReadString('\n')
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			ptemp, err = strconv.Atoi(sentence[:len(sentence)-2])
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			porigs <- ptemp
+
+			time.Sleep(1000000000)
+		} else if strings.Contains(sentence, "quit") {
+			break
+		} else {
+			log.Println("Please input 'insert' or 'complete' or 'quit'.")
 		}
 	}
+
+	/*log.Println("Please input sentence.")
+
+	sentence, err = inputReader.ReadString('\n')
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if strings.Contains(sentence, "close") {
+		ptemp, ok = <-pdests
+		if !ok {
+			log.Println(ptemp)
+		}
+	}*/
 }
